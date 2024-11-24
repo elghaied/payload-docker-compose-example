@@ -1,3 +1,7 @@
+# Base image for MongoDB
+FROM mongo:latest AS mongodb
+
+# Base image for Node
 FROM node:20-alpine AS base
 
 # Install dependencies only when needed
@@ -11,43 +15,59 @@ COPY package.json pnpm-lock.yaml* ./
 # Install dependencies
 RUN corepack enable pnpm && pnpm i --frozen-lockfile
 
-# Build stage
-FROM base AS builder
+# Build stage with MongoDB
+FROM mongo:latest AS builder
+# Add Node.js to MongoDB image
+RUN apt-get update && apt-get install -y curl
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+RUN apt-get install -y nodejs
+
+# Install pnpm
+RUN corepack enable pnpm
+
 WORKDIR /app
+
+# Start MongoDB in the background
+RUN mkdir -p /data/db && \
+    mongod --fork --logpath /var/log/mongodb.log --bind_ip 127.0.0.1
+
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Set all build-time variables
-ARG DATABASE_URI
+# Set build-time variables
+ARG DATABASE_URI=mongodb://127.0.0.1:27017/your_database_name
 ENV DATABASE_URI=${DATABASE_URI}
 ARG PAYLOAD_SECRET
 ENV PAYLOAD_SECRET=${PAYLOAD_SECRET}
 ARG NEXT_PUBLIC_SERVER_URL
 ENV NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
+
 ENV PAYLOAD_CONFIG_PATH=src/payload.config.ts
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
 ENV NEXT_BUILD_STANDALONE=true
 
-# Generate types and run the build
-RUN corepack enable pnpm && \
+# Wait for MongoDB and run the build
+RUN mongod --fork --logpath /var/log/mongodb.log --bind_ip 127.0.0.1 && \
+    until mongosh --eval "print(\"waited for connection\")" 2>/dev/null; do \
+      sleep 1; \
+    done && \
     pnpm generate:types && \
     NODE_OPTIONS="--max_old_space_size=4096" pnpm run build
 
-# Production image, copy all the files and run next
+# Production image
 FROM base AS runner
 WORKDIR /app
 
 ENV NODE_ENV production
 ENV NEXT_TELEMETRY_DISABLED 1
-ENV PAYLOAD_CONFIG_PATH=src/payload.config.ts
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
 COPY --from=builder /app/public ./public
 
-
-# Set the correct permission for prerender cache
+# Set permissions for prerender cache
 RUN mkdir .next
 RUN chown nextjs:nodejs .next
 

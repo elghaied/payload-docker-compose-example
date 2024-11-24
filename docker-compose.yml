@@ -1,33 +1,19 @@
 services:
-  nextjs:
+  payload:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         - DATABASE_URI=mongodb://host.docker.internal:27017/your_database_name
         - PAYLOAD_SECRET=${PAYLOAD_SECRET}
-        - NEXT_PRIVATE_DRAFT_SECRET=${NEXT_PRIVATE_DRAFT_SECRET}
-        - NEXT_PRIVATE_REVALIDATION_KEY=${NEXT_PRIVATE_REVALIDATION_KEY}
-        - PAYLOAD_PUBLIC_DRAFT_SECRET=${PAYLOAD_PUBLIC_DRAFT_SECRET}
-        - REVALIDATION_KEY=${REVALIDATION_KEY}
-        - NEXT_PUBLIC_IS_LIVE=${NEXT_PUBLIC_IS_LIVE}
         - NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
-        - PAYLOAD_PUBLIC_SERVER_URL=${PAYLOAD_PUBLIC_SERVER_URL}
     ports:
       - "3000:3000"
     environment:
       - DATABASE_URI=mongodb://mongodb:27017/your_database_name
       - PAYLOAD_SECRET=${PAYLOAD_SECRET}
-      - NEXT_PRIVATE_DRAFT_SECRET=${NEXT_PRIVATE_DRAFT_SECRET}
-      - NEXT_PRIVATE_REVALIDATION_KEY=${NEXT_PRIVATE_REVALIDATION_KEY}
-      - PAYLOAD_PUBLIC_DRAFT_SECRET=${PAYLOAD_PUBLIC_DRAFT_SECRET}
-      - REVALIDATION_KEY=${REVALIDATION_KEY}
-      - NEXT_PUBLIC_IS_LIVE=${NEXT_PUBLIC_IS_LIVE}
       - NEXT_PUBLIC_SERVER_URL=${NEXT_PUBLIC_SERVER_URL}
-      - PAYLOAD_PUBLIC_SERVER_URL=${PAYLOAD_PUBLIC_SERVER_URL}
-      - PAYLOAD_CONFIG_PATH=src/payload.config.ts
-      - NEXT_TELEMETRY_DISABLED=1
-      - NODE_ENV=production
+
     extra_hosts:
       - "host.docker.internal:host-gateway"
     networks:
